@@ -33,6 +33,10 @@ uvicorn main:app --reload
 
 La API quedará disponible en `http://127.0.0.1:8000`.
 
+## Interfaz web
+
+Abre `http://127.0.0.1:8000/` para ver la UI de administración de productos.
+
 ## Documentación automática
 
 Una vez en ejecución, puedes ver la documentación interactiva en:

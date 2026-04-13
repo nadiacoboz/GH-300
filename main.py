@@ -1,8 +1,12 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import List
+from pathlib import Path
 
 app = FastAPI(title="Administrador de Productos")
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 class Product(BaseModel):
     id: int = Field(..., example=1)
@@ -22,9 +26,10 @@ products: List[Product] = [
 ]
 next_id = 4
 
-@app.get("/", summary="Bienvenida")
+@app.get("/", response_class=HTMLResponse)
 def root():
-    return {"message": "Administrador de Productos. Usa /products o /docs para ver la API."}
+    html_file = Path(__file__).parent / "static" / "index.html"
+    return HTMLResponse(html_file.read_text(encoding="utf-8"))
 
 @app.get("/products", response_model=List[Product])
 def list_products():

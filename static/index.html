@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administrador de Productos</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; color: #212529; }
+    h1 { color: #343a40; }
+    .card { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #dee2e6; }
+    th { background: #e9ecef; }
+    input, button { padding: 10px; border-radius: 6px; border: 1px solid #ced4da; }
+    input { width: 100%; box-sizing: border-box; }
+    button { cursor: pointer; background: #007bff; color: #fff; border: none; }
+    button:hover { background: #0069d9; }
+    .actions button { margin-right: 6px; background: #17a2b8; }
+    .actions button.delete { background: #dc3545; }
+    .message { margin-top: 10px; padding: 12px; border-radius: 8px; }
+    .message.error { background: #f8d7da; color: #842029; }
+    .message.success { background: #d1e7dd; color: #0f5132; }
+  </style>
+</head>
+<body>
+  <h1>Administrador de Productos</h1>
+
+  <div class="card">
+    <h2>Productos disponibles</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Cantidad</th><th>Acciones</th></tr>
+      </thead>
+      <tbody id="product-list"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Agregar producto</h2>
+    <form id="create-form">
+      <label>Nombre</label>
+      <input id="create-name" type="text" required placeholder="Ej. Galletas" />
+      <label>Precio</label>
+      <input id="create-price" type="number" step="0.01" min="0.01" required placeholder="Ej. 12.50" />
+      <label>Cantidad</label>
+      <input id="create-quantity" type="number" min="0" required placeholder="Ej. 10" />
+      <button type="submit">Crear producto</button>
+    </form>
+    <div id="create-message" class="message" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Actualizar producto</h2>
+    <form id="update-form">
+      <label>ID del producto</label>
+      <input id="update-id" type="number" min="1" required placeholder="Ej. 1" />
+      <label>Nombre</label>
+      <input id="update-name" type="text" required placeholder="Ej. Galletas" />
+      <label>Precio</label>
+      <input id="update-price" type="number" step="0.01" min="0.01" required placeholder="Ej. 12.50" />
+      <label>Cantidad</label>
+      <input id="update-quantity" type="number" min="0" required placeholder="Ej. 10" />
+      <button type="submit">Actualizar producto</button>
+    </form>
+    <div id="update-message" class="message" style="display:none;"></div>
+  </div>
+
+  <script>
+    const apiUrl = '/products';
+
+    async function fetchProducts() {
+      const res = await fetch(apiUrl);
+      const products = await res.json();
+      const tbody = document.getElementById('product-list');
+      tbody.innerHTML = '';
+
+      products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${product.id}</td>
+          <td>${product.name}</td>
+          <td>${product.price.toFixed(2)}</td>
+          <td>${product.quantity}</td>
+          <td class="actions">
+            <button onclick="fillUpdate(${product.id}, '${product.name}', ${product.price}, ${product.quantity})">Editar</button>
+            <button class="delete" onclick="deleteProduct(${product.id})">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function showMessage(elementId, text, type='success') {
+      const el = document.getElementById(elementId);
+      el.textContent = text;
+      el.className = `message ${type}`;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    function fillUpdate(id, name, price, quantity) {
+      document.getElementById('update-id').value = id;
+      document.getElementById('update-name').value = name;
+      document.getElementById('update-price').value = price;
+      document.getElementById('update-quantity').value = quantity;
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm(`Eliminar producto ${id}?`)) return;
+      const res = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+      if (res.status === 204) {
+        showMessage('create-message', `Producto ${id} eliminado`, 'success');
+        fetchProducts();
+      } else {
+        const error = await res.json();
+        showMessage('create-message', error.detail || 'Error al eliminar', 'error');
+      }
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const data = {
+        name: document.getElementById('create-name').value,
+        price: Number(document.getElementById('create-price').value),
+        quantity: Number(document.getElementById('create-quantity').value),
+      };
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        showMessage('create-message', 'Producto creado correctamente', 'success');
+        event.target.reset();
+        fetchProducts();
+      } else {
+        const error = await res.json();
+        showMessage('create-message', error.detail || 'Error al crear', 'error');
+      }
+    });
+
+    document.getElementById('update-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const id = document.getElementById('update-id').value;
+      const data = {
+        name: document.getElementById('update-name').value,
+        price: Number(document.getElementById('update-price').value),
+        quantity: Number(document.getElementById('update-quantity').value),
+      };
+      const res = await fetch(`${apiUrl}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        showMessage('update-message', 'Producto actualizado correctamente', 'success');
+        event.target.reset();
+        fetchProducts();
+      } else {
+        const error = await res.json();
+        showMessage('update-message', error.detail || 'Error al actualizar', 'error');
+      }
+    });
+
+    fetchProducts();
+  </script>
+</body>
+</html>
